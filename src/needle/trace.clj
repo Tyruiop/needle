@@ -2,26 +2,16 @@
   (:require
    [clojure.walk :refer [postwalk]]
    [clojure.string :as str]
-   [cheshire.core :as ch]))
+   [clojure.data.json :as json])
+  (:import
+   [java.lang ProcessHandle]))
 
-(defn get-pid
-  []
-  (->
-   (java.lang.management.ManagementFactory/getRuntimeMXBean)
-   (.getName)))
+(defn get-pid [] (.pid (ProcessHandle/current)))
 
 (defn get-tid
   []
   (-> (Thread/currentThread)
       (.getId)))
-
-(defn parse-pid
-  [pid]
-  (->
-   pid
-   (str/split #"@")
-   first
-   Integer/parseInt))
 
 (def get-time
   (let [init (System/nanoTime)]
@@ -36,11 +26,10 @@
      (fn [e] (when (not (verif-fn e)) e))
      data)))
 
-(defn format-ev [cat {:keys [pid] :as ev}]
-  (let [i-pid (parse-pid pid)]
-    (-> ev
-        (assoc :pid i-pid :cat cat)
-        (update :args clean-data))))
+(defn format-ev [cat ev]
+  (-> ev
+      (assoc :cat cat)
+      (update :args clean-data)))
 
 (defn dump-log
   [cur-agent target log-name cat]
