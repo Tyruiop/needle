@@ -52,7 +52,7 @@
          :systemTraceEvents "SystemTraceData"
          :otherData
          {:version log-name}}]
-    (spit target (ch/encode log))
+    (spit target (json/write-str log))
     []))
 
 (defmacro base-trace
