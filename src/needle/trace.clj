@@ -101,6 +101,7 @@
                        :args (when ~with-args (into {} (map #(do [(keyword %1) %2]) '~args ~args)))}
            ~'res ~fn-body
            ~'ev-end {:ph :E :pid ~'pid :tid ~'tid :ts (get-time) :name ~(str (ns-name *ns*) "/" (name fn-name))}]
+       (send ~ref-name conj ~'ev-start)
        (send ~ref-name conj ~'ev-end)
        ~'res)))
 
