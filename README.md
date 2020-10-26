@@ -24,15 +24,15 @@ Simple example:
   "Document string"
   [max-val somefn setarg]
   (reduce somefn 0 (range max-val)))
-  
+
 (def max-vals
-  (map 
+  (map
    #(+ 500000 (rand-int 1000000) %)
    (range 10)))
 
 (doseq [i max-vals]
   (my-function i + {#{:a :b} :c}))
-  
+
 (when (= (System/getenv "DEBUG") "true")
   (send my-agent dump-log "target.json" "Test log" "PERF"))
 ```
@@ -44,9 +44,12 @@ You can then load `target.json` into [chrome://tracing](chrome://tracing) to see
 Other macros include `defn-atrace`, `defn-trace-eb`, `defn-atrace-eb`, and their
 anonymous function equivalent `fn-trace`, `fn-atrace`, `fn-trace-eb`, `fn-atrace-eb`.
 
-## Known limitations
+## TODO
 
-* None of the macros work on multi arity functions.
+* Support for flow events
+* Support for async events
+* Support for multimethods
+* [DONE] ~~None of the macros work on multi arity functions.~~
 
 ## License
 
