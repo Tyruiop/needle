@@ -44,151 +44,102 @@
     (spit target (json/write-str log))
     []))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; X Event Messages, default
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defmacro base-trace
-  [fn-name fn-name-body ref-name args with-args]
-  `(if (nil? ~ref-name)
+  [fn-name fn-name-body args
+   {:keys [agent event-mode flow-mode with-args]}]
+  `(if (nil? ~agent)
      (apply ~fn-name-body ~args)
      (let [~'pid (get-pid)
            ~'tid (get-tid)
-           ~'ev-start (get-time)
+           ~'args-list (when ~with-args
+                         (into {} (map #(do [(str %1) %2]) '~args ~args)))
+           ~'ev-name ~(str (ns-name *ns*) "/" (name fn-name))
+           ~'ev-ts-start (get-time)
+           ~'ev-start (cond
+                        (= ~event-mode :EB)
+                        {:ph :B :pid ~'pid :tid ~'tid :ts ~'ev-ts-start
+                         :name ~'ev-name :args ~'args-list}
+
+                        (= ~event-mode :X)
+                        ~'ev-ts-start)
            ~'res (apply ~fn-name-body ~args)
-           ~'ev
-           {:ph :X :pid ~'pid :tid ~'tid :ts ~'ev-start
-            :dur (- (get-time) ~'ev-start) :name ~(str (ns-name *ns*) "/" (name fn-name))
-            :args (when ~with-args (into {} (map #(do [(keyword %1) %2]) '~args ~args)))}]
-       (send ~ref-name conj ~'ev)
+           ~'ev-ts-end (get-time)
+           ~'ev-end (cond
+                      (= ~event-mode :EB)
+                      {:ph :E :pid ~'pid :tid ~'tid :ts ~'ev-ts-end
+                       :name ~'ev-name}
+
+                      (= ~event-mode :X)
+                      {:ph :X :pid ~'pid :tid ~'tid :ts ~'ev-start
+                       :dur (- ~'ev-ts-end ~'ev-ts-start)
+                       :name ~'ev-name :args ~'args-list})]
+       (when (= ~event-mode :EB)
+         (send ~agent conj ~'ev-start))
+       (when (not (nil? ~flow-mode))
+         (let [~'flow-event {:ph ~flow-mode :pid ~'pid :tid ~'tid
+                             :ts (if
+                                   (or
+                                    (= ~flow-mode :t)
+                                    (= ~flow-mode :s))
+                                   ~'ev-ts-end
+                                   ~'ev-ts-start)
+                             :id (:flow-id (first ~args))
+                             :name (:flow-name (first ~args))}]
+           (send ~agent conj ~'flow-event)))
+       (send ~agent conj ~'ev-end)
        ~'res)))
 
 (defmacro expl-arity
-  [anon fn-name fn-name-body ref-name bodies with-args]
-  (let [new-bodies (map
-                    (fn [[args body]]
-                      (list args `(base-trace ~fn-name ~fn-name-body ~ref-name ~args ~with-args)))
-                    bodies)]
-    `(if ~anon
+  [fn-name fn-name-body doc-string bodies {:keys [anonymous] :as opts}]
+  (let [new-bodies
+        (map
+         (fn [[args body]]
+           (list args `(base-trace ~fn-name ~fn-name-body ~args ~opts)))
+         bodies)]
+    `(if ~anonymous
        (fn ~fn-name ~@new-bodies)
-       (defn ~fn-name ~@new-bodies))))
-
-(defmacro base-defn-trace
-  "Simple trace, without argument logging"
-  [with-args fn-name ref-name & fdecl]
-  (let [doc-string (if (string? (first fdecl)) (first fdecl) nil)
-        fdecl (if (string? (first fdecl)) (next fdecl) fdecl)
-        fn-name-body (symbol (str (name fn-name) "-body"))]
-    (if (vector? (first fdecl))
-      `(do
-         (defn ~fn-name-body ~@fdecl)
-         (defn ~fn-name {:doc ~doc-string}
-           ~(first fdecl)
-           (base-trace ~fn-name ~fn-name-body ~ref-name ~(first fdecl) ~with-args)))
-      `(do
-         (defn ~fn-name-body ~@fdecl)
-         (expl-arity false ~fn-name ~fn-name-body ~ref-name ~fdecl ~with-args)))))
+       (defn ~fn-name {:doc ~doc-string} ~@new-bodies))))
 
 (defmacro defn-trace
-  [fn-name ref-name & fdecl]
-  `(base-defn-trace false ~fn-name ~ref-name ~@fdecl))
-
-(defmacro defn-atrace
-  [fn-name ref-name & fdecl]
-  `(base-defn-trace true ~fn-name ~ref-name ~@fdecl))
-
-(defmacro base-fn-trace
   "Simple trace, without argument logging"
-  [with-args fn-name ref-name & fdecl]
-  (let [fn-name-body (symbol (str (name fn-name) "-body"))]
-    (if (vector? (first fdecl))
-      `(do
-         (let [~fn-name-body (fn ~@fdecl)]
-           (fn ~fn-name
-             ~(first fdecl)
-             (base-trace ~fn-name ~fn-name-body ~ref-name ~(first fdecl) ~with-args))))
-      `(do
-         (let [~fn-name-body ~@fdecl]
-           (expl-arity true ~fn-name ~fn-name-body ~ref-name ~fdecl ~with-args))))))
-
-(defmacro fn-trace
-  [fn-name ref-name & fdecl]
-  `(base-fn-trace false ~fn-name ~ref-name ~@fdecl))
-
-(defmacro fn-atrace
-  [fn-name ref-name & fdecl]
-  `(base-fn-trace true ~fn-name ~ref-name ~@fdecl))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; EB Event Messages
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defmacro base-trace-EB
-  [fn-name fn-name-body ref-name args with-args]
-  `(if (nil? ~ref-name)
-     (apply ~fn-name-body ~args)
-     (let [~'pid (get-pid)
-           ~'tid (get-tid)
-           ~'ev-start {:ph :B :pid ~'pid :tid ~'tid :ts (get-time) :name ~(str (ns-name *ns*) "/" (name fn-name))
-                       :args (when ~with-args (into {} (map #(do [(keyword %1) %2]) '~args ~args)))}
-           ~'res (apply ~fn-name-body ~args)
-           ~'ev-end {:ph :E :pid ~'pid :tid ~'tid :ts (get-time) :name ~(str (ns-name *ns*) "/" (name fn-name))}]
-       (send ~ref-name conj ~'ev-start)
-       (send ~ref-name conj ~'ev-end)
-       ~'res)))
-
-(defmacro expl-arity-EB
-  [anon fn-name fn-name-body ref-name bodies with-args]
-  (let [new-bodies (map
-                    (fn [[args body]]
-                      (list args `(base-trace-EB ~fn-name ~fn-name-body ~ref-name ~args ~with-args)))
-                    bodies)]
-    `(if ~anon
-       (fn ~fn-name ~@new-bodies)
-       (defn ~fn-name ~@new-bodies))))
-
-(defmacro base-defn-trace-EB
-  "Simple trace, without argument logging"
-  [with-args fn-name ref-name & fdecl]
+  [fn-name opts & fdecl]
   (let [doc-string (if (string? (first fdecl)) (first fdecl) nil)
         fdecl (if (string? (first fdecl)) (next fdecl) fdecl)
-        fn-name-body (symbol (str (name fn-name) "-body"))]
+        fn-name-body (symbol (str (name fn-name) "-body"))
+        ref-name (if (map? opts) (:agent opts) opts)
+        event-mode (if (map? opts) (get opts :mode :X) :X)
+        flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
+        with-args (if (map? opts) (get opts :with-args false) false)
+        opts {:agent ref-name :event-mode event-mode
+              :flow-mode flow-mode :with-args with-args
+              :anonymous false}]
     (if (vector? (first fdecl))
       `(do
          (defn ~fn-name-body ~@fdecl)
          (defn ~fn-name {:doc ~doc-string}
            ~(first fdecl)
-           (base-trace-EB ~fn-name ~fn-name-body ~ref-name ~(first fdecl) ~with-args)))
+           (base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts)))
       `(do
          (defn ~fn-name-body ~@fdecl)
-         (expl-arity-EB false ~fn-name ~fn-name-body ~ref-name ~fdecl ~with-args)))))
+         (expl-arity ~fn-name ~fn-name-body ~doc-string ~fdecl ~opts)))))
 
-(defmacro defn-trace-eb
-  [fn-name ref-name & fdecl]
-  `(base-defn-trace-EB false ~fn-name ~ref-name ~@fdecl))
-
-(defmacro defn-atrace-eb
-  [fn-name ref-name & fdecl]
-  `(base-defn-trace-EB true ~fn-name ~ref-name ~@fdecl))
-
-(defmacro base-fn-trace-EB
+(defmacro fn-trace
   "Simple trace, without argument logging"
-  [with-args fn-name ref-name & fdecl]
-  (let [fn-name-body (symbol (str (name fn-name) "-body"))]
+  [fn-name opts & fdecl]
+  (let [fn-name-body (symbol (str (name fn-name) "-body"))
+        ref-name (if (map? opts) (:agent opts) opts)
+        event-mode (if (map? opts) (get opts :mode :X) :X)
+        flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
+        with-args (if (map? opts) (get opts :with-args false) false)
+        opts {:agent ref-name :event-mode event-mode
+              :flow-mode flow-mode :with-args with-args
+              :anonymous true}]
     (if (vector? (first fdecl))
       `(do
          (let [~fn-name-body (fn ~@fdecl)]
            (fn ~fn-name
              ~(first fdecl)
-             (base-trace-EB ~fn-name ~fn-name-body ~ref-name ~(first fdecl) ~with-args))))
+             (base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts))))
       `(do
-         (let [~fn-name-body ~@fdecl]
-           (expl-arity-EB true ~fn-name ~fn-name-body ~ref-name ~fdecl ~with-args))))))
-
-(defmacro fn-trace-eb
-  [fn-name ref-name & fdecl]
-  `(base-fn-trace-EB false ~fn-name ~ref-name ~@fdecl))
-
-(defmacro fn-atrace-eb
-  [fn-name ref-name & fdecl]
-  `(base-fn-trace-EB true ~fn-name ~ref-name ~@fdecl))
+         (let [~fn-name-body (fn ~fn-name ~@fdecl)]
+           (expl-arity ~fn-name ~fn-name-body nil ~fdecl ~opts))))))
