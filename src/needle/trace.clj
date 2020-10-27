@@ -89,12 +89,21 @@
        (send ~agent conj ~'ev-end)
        ~'res)))
 
+(defn clean-args
+  [args]
+  (apply
+   vector
+   (map-indexed
+    (fn [i arg]
+      (if (symbol? arg) arg (symbol (str "destruct-" i))))
+    args)))
+
 (defmacro expl-arity
   [fn-name fn-name-body doc-string bodies {:keys [anonymous] :as opts}]
   (let [new-bodies
         (map
          (fn [[args body]]
-           (list args `(base-trace ~fn-name ~fn-name-body ~args ~opts)))
+           (list (clean-args args) `(base-trace ~fn-name ~fn-name-body ~(clean-args args) ~opts)))
          bodies)]
     (if anonymous
       `(letfn [(~fn-name-body ~@bodies)
@@ -102,7 +111,7 @@
          ~fn-name)
       `(letfn [(~fn-name-body ~@bodies)
                (~fn-name ~@new-bodies)]
-         (def ~fn-name ~fn-name)))))
+         (def ^{:doc ~doc-string} ~fn-name ~fn-name)))))
 
 (def
   ^{:doc "Wraps a function with an agent based profiler.
