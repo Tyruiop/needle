@@ -100,46 +100,70 @@
        (fn ~fn-name ~@new-bodies)
        (defn ~fn-name {:doc ~doc-string} ~@new-bodies))))
 
-(defmacro defn-trace
-  "Simple trace, without argument logging"
-  [fn-name opts & fdecl]
-  (let [doc-string (if (string? (first fdecl)) (first fdecl) nil)
-        fdecl (if (string? (first fdecl)) (next fdecl) fdecl)
-        fn-name-body (symbol (str (name fn-name) "-body"))
-        ref-name (if (map? opts) (:agent opts) opts)
-        event-mode (if (map? opts) (get opts :mode :X) :X)
-        flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
-        with-args (if (map? opts) (get opts :with-args false) false)
-        opts {:agent ref-name :event-mode event-mode
-              :flow-mode flow-mode :with-args with-args
-              :anonymous false}]
-    (if (vector? (first fdecl))
-      `(do
-         (defn ~fn-name-body ~@fdecl)
-         (defn ~fn-name {:doc ~doc-string}
-           ~(first fdecl)
-           (base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts)))
-      `(do
-         (defn ~fn-name-body ~@fdecl)
-         (expl-arity ~fn-name ~fn-name-body ~doc-string ~fdecl ~opts)))))
-
-(defmacro fn-trace
-  "Simple trace, without argument logging"
-  [fn-name opts & fdecl]
-  (let [fn-name-body (symbol (str (name fn-name) "-body"))
-        ref-name (if (map? opts) (:agent opts) opts)
-        event-mode (if (map? opts) (get opts :mode :X) :X)
-        flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
-        with-args (if (map? opts) (get opts :with-args false) false)
-        opts {:agent ref-name :event-mode event-mode
-              :flow-mode flow-mode :with-args with-args
-              :anonymous true}]
-    (if (vector? (first fdecl))
-      `(do
-         (let [~fn-name-body (fn ~@fdecl)]
-           (fn ~fn-name
+(def
+  ^{:doc "Wraps a function with an agent based profiler.
+    params-map must have the :agent key set to the target agent,
+    other optional keys of params-map are
+    * :mode [:X | :EB], default :X
+    * :flow-mode [:s | :t | :n | nil], default nil
+    * :with-args [true | false], default false"
+    :arglists '([name agent doc-string? body]
+                [name params-map doc-string? body])}
+  defn-trace
+  (fn
+    [&form &env
+     fn-name opts & fdecl]
+    (let [doc-string (if (string? (first fdecl)) (first fdecl) nil)
+          fdecl (if (string? (first fdecl)) (next fdecl) fdecl)
+          fn-name-body (symbol (str (name fn-name) "-body"))
+          ref-name (if (map? opts) (:agent opts) opts)
+          event-mode (if (map? opts) (get opts :mode :X) :X)
+          flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
+          with-args (if (map? opts) (get opts :with-args false) false)
+          opts {:agent ref-name :event-mode event-mode
+                :flow-mode flow-mode :with-args with-args
+                :anonymous false}]
+      (if (vector? (first fdecl))
+        `(do
+           (defn ~fn-name-body ~@fdecl)
+           (defn ~fn-name {:doc ~doc-string}
              ~(first fdecl)
-             (base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts))))
-      `(do
-         (let [~fn-name-body (fn ~fn-name ~@fdecl)]
-           (expl-arity ~fn-name ~fn-name-body nil ~fdecl ~opts))))))
+             (base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts)))
+        `(do
+           (defn ~fn-name-body ~@fdecl)
+           (expl-arity ~fn-name ~fn-name-body ~doc-string ~fdecl ~opts))))))
+
+(. (var defn-trace) (setMacro))
+
+(def
+  ^{:doc "Wraps an anonymous function with an agent based
+    profiler. params-map must have the :agent key set to the
+    target agent, other optional keys of params-map are
+    * :mode [:X | :EB], default :X
+    * :flow-mode [:s | :t | :n | nil], default nil
+    * :with-args [true | false], default false"
+    :arglists '([name agent body]
+                [name params-map body])}
+  fn-trace
+  (fn
+    [&form &env
+     fn-name opts & fdecl]
+    (let [fn-name-body (symbol (str (name fn-name) "-body"))
+          ref-name (if (map? opts) (:agent opts) opts)
+          event-mode (if (map? opts) (get opts :mode :X) :X)
+          flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
+          with-args (if (map? opts) (get opts :with-args false) false)
+          opts {:agent ref-name :event-mode event-mode
+                :flow-mode flow-mode :with-args with-args
+                :anonymous true}]
+      (if (vector? (first fdecl))
+        `(do
+           (let [~fn-name-body (fn ~@fdecl)]
+             (fn ~fn-name
+               ~(first fdecl)
+               (base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts))))
+        `(do
+           (let [~fn-name-body (fn ~fn-name ~@fdecl)]
+             (expl-arity ~fn-name ~fn-name-body nil ~fdecl ~opts)))))))
+
+(. (var fn-trace) (setMacro))
