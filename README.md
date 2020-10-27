@@ -2,15 +2,14 @@
 
 ![](smallshot.png)
 
-A simple Clojure profiler that works as a drop in `defn` replacement. Its output is to be loaded in [chrome://tracing](chrome://tracing).
+A simple Clojure profiler that works as a drop in `defn` replacement. Its output
+is to be loaded in [chrome://tracing](chrome://tracing).
 
 * Supports multi-process and multi-thread profiling.
 * Minimal performance impact in debug mode, negligible otherwise (see example bellow).
 * Cleaning and export of the data done in a separate tread.
 
 ## Usage
-
-Simple example:
 
 ```clojure
 (ns example
@@ -37,19 +36,28 @@ Simple example:
   (send my-agent dump-log "target.json" "Test log" "PERF"))
 ```
 
-If you run the above code without the `DEBUG` env variable set to `true`, then `my-agent` will be `nil` and `defn-trace` will behave exactly like `defn`. If `DEBUG=true`, then profiling data will be sent to `my-agent`, cleaned and exported to `target.json`.
+If you run the above code without the `DEBUG` env variable set to `true`,
+then `my-agent` will be `nil` and `defn-trace` will behave exactly like `defn`.
+If `DEBUG=true`, then profiling data will be sent to `my-agent`, cleaned and
+exported to `target.json`.
 
-You can then load `target.json` into [chrome://tracing](chrome://tracing) to see the flamegraph.
+You can then load `target.json` into [chrome://tracing](chrome://tracing) to
+see the associated graph.
 
-Other macros include `defn-atrace`, `defn-trace-eb`, `defn-atrace-eb`, and their
-anonymous function equivalent `fn-trace`, `fn-atrace`, `fn-trace-eb`, `fn-atrace-eb`.
+`fn-trace` is to `defn-trace` what `fn` is to `defn`, with the difference that
+`fn-trace` functions cannot be anonymous and require a name, for tracing
+purpose.
 
 ## TODO
 
-* Support for flow events
+* [DONE] ~~Support for flow events~~
 * Support for async events
 * Support for multimethods
 * [DONE] ~~None of the macros work on multi arity functions.~~
+
+## Documentation
+
+Reference document for the [Chrome Tracing Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#!).
 
 ## License
 
