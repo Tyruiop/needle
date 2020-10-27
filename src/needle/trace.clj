@@ -100,7 +100,9 @@
       `(letfn [(~fn-name-body ~@bodies)
                (~fn-name ~@new-bodies)]
          ~fn-name)
-      (list 'def (with-meta fn-name {:doc doc-string}) `(fn ~@new-bodies)))))
+      `(letfn [(~fn-name-body ~@bodies)
+               (~fn-name ~@new-bodies)]
+         (def ~fn-name ~fn-name)))))
 
 (def
   ^{:doc "Wraps a function with an agent based profiler.
@@ -124,16 +126,9 @@
           with-args (if (map? opts) (get opts :with-args false) false)
           opts {:agent ref-name :event-mode event-mode
                 :flow-mode flow-mode :with-args with-args
-                :anonymous false}]
-      (if (vector? (first fdecl))
-        `(do
-          (defn ~fn-name-body ~@fdecl)
-          ~(list 'defn fn-name {:doc doc-string}
-             (first fdecl)
-             `(base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts)))
-        `(do
-           (defn ~fn-name-body ~@fdecl)
-           (expl-arity ~fn-name ~fn-name-body ~doc-string ~fdecl ~opts))))))
+                :anonymous false}
+          fdecl (if (vector? (first fdecl)) (list fdecl) fdecl)]
+      `(expl-arity ~fn-name ~fn-name-body ~doc-string ~fdecl ~opts))))
 
 (. (var defn-trace) (setMacro))
 
