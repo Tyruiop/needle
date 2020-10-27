@@ -69,4 +69,17 @@
     (foo-fn 1 2)
     (Thread/sleep 100)
     (is (= #{{"a" 1 "b" 2} {"destruct-0" {:a 3}} {"destruct-0" {:a 0}}}
+           (into #{} (map :args @my-agent)))))
+
+  (testing "Testing saving output and selecting which args to log"
+    (def my-agent (agent []))
+    (defn-trace foo-fn
+      {:agent my-agent
+       :save-output true
+       :with-args true
+       :args-map [true false]}
+      [a b] (+ a b))
+    (foo-fn 1 2)
+    (Thread/sleep 100)
+    (is (= #{{"a" 1 "b" "__unsaved__" "__fn-output" 3}}
            (into #{} (map :args @my-agent))))))

@@ -46,28 +46,37 @@
 
 (defmacro base-trace
   [fn-name fn-name-body args
-   {:keys [agent event-mode flow-mode with-args]}]
+   {:keys [agent event-mode flow-mode with-args args-map save-output]}]
   `(if (nil? ~agent)
      (apply ~fn-name-body ~args)
      (let [~'pid (get-pid)
            ~'tid (get-tid)
-           ~'args-list (when ~with-args
-                         (into {} (map #(do [(str %1) %2]) '~args ~args)))
+           ~'args-list
+           (when ~with-args
+             (if (and ~args-map
+                      (= (count ~args-map) (count ~args)))
+               (into {} (map
+                         #(do [(str %1) (if %3 %2 "__unsaved__")])
+                         '~args ~args ~args-map))
+               (into {} (map #(do [(str %1) %2]) '~args ~args))))
            ~'ev-name ~(str (ns-name *ns*) "/" (name fn-name))
            ~'ev-ts-start (get-time)
            ~'ev-start (cond
                         (= ~event-mode :EB)
                         {:ph :B :pid ~'pid :tid ~'tid :ts ~'ev-ts-start
-                         :name ~'ev-name :args ~'args-list}
+                         :name ~'ev-name}
 
                         (= ~event-mode :X)
                         ~'ev-ts-start)
            ~'res (apply ~fn-name-body ~args)
            ~'ev-ts-end (get-time)
+           ~'args-list (if ~save-output
+                         (assoc ~'args-list "__fn-output" ~'res)
+                         ~'args-list)
            ~'ev-end (cond
                       (= ~event-mode :EB)
                       {:ph :E :pid ~'pid :tid ~'tid :ts ~'ev-ts-end
-                       :name ~'ev-name}
+                       :name ~'ev-name :args ~'args-list}
 
                       (= ~event-mode :X)
                       {:ph :X :pid ~'pid :tid ~'tid :ts ~'ev-start
@@ -133,9 +142,12 @@
           event-mode (if (map? opts) (get opts :mode :X) :X)
           flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
           with-args (if (map? opts) (get opts :with-args false) false)
+          args-map (if (map? opts) (get opts :args-map nil) nil)
+          save-output (if (map? opts) (get opts :save-output false) false)
           opts {:agent ref-name :event-mode event-mode
                 :flow-mode flow-mode :with-args with-args
-                :anonymous false}
+                :args-map args-map :anonymous false
+                :save-output save-output}
           fdecl (if (vector? (first fdecl)) (list fdecl) fdecl)]
       `(expl-arity ~fn-name ~fn-name-body ~doc-string ~fdecl ~opts))))
 
@@ -159,9 +171,12 @@
           event-mode (if (map? opts) (get opts :mode :X) :X)
           flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
           with-args (if (map? opts) (get opts :with-args false) false)
+          args-map (if (map? opts) (get opts :args-map nil) nil)
+          save-output (if (map? opts) (get opts :save-output false) false)
           opts {:agent ref-name :event-mode event-mode
                 :flow-mode flow-mode :with-args with-args
-                :anonymous true}
+                :args-map args-map :anonymous true
+                :save-output save-output}
           fdecl (if (vector? (first fdecl)) (list fdecl) fdecl)]
       `(expl-arity ~fn-name ~fn-name-body nil ~fdecl ~opts))))
 
