@@ -96,9 +96,9 @@
          (fn [[args body]]
            (list args `(base-trace ~fn-name ~fn-name-body ~args ~opts)))
          bodies)]
-    `(if ~anonymous
-       (fn ~fn-name ~@new-bodies)
-       (defn ~fn-name {:doc ~doc-string} ~@new-bodies))))
+    (if anonymous
+      (list 'fn fn-name `(do ~@new-bodies))
+      (list 'def (with-meta fn-name {:doc doc-string}) `(fn ~@new-bodies)))))
 
 (def
   ^{:doc "Wraps a function with an agent based profiler.
@@ -125,10 +125,10 @@
                 :anonymous false}]
       (if (vector? (first fdecl))
         `(do
-           (defn ~fn-name-body ~@fdecl)
-           (defn ~fn-name {:doc ~doc-string}
-             ~(first fdecl)
-             (base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts)))
+          (defn ~fn-name-body ~@fdecl)
+          ~(list 'defn fn-name {:doc doc-string}
+             (first fdecl)
+             `(base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts)))
         `(do
            (defn ~fn-name-body ~@fdecl)
            (expl-arity ~fn-name ~fn-name-body ~doc-string ~fdecl ~opts))))))
@@ -159,9 +159,9 @@
       (if (vector? (first fdecl))
         `(do
            (let [~fn-name-body (fn ~@fdecl)]
-             (fn ~fn-name
-               ~(first fdecl)
-               (base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts))))
+             ~(list 'fn fn-name
+               (first fdecl)
+               `(base-trace ~fn-name ~fn-name-body ~(first fdecl) ~opts))))
         `(do
            (let [~fn-name-body (fn ~fn-name ~@fdecl)]
              (expl-arity ~fn-name ~fn-name-body nil ~fdecl ~opts)))))))
