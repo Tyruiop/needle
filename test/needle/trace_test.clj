@@ -36,4 +36,17 @@
     (foo-fn 1 2)
     (Thread/sleep 100)
     (is (= #{{"a" 1 "b" 2} {"a" 3} {"a" 0}}
+           (into #{} (map :args @my-agent)))))
+
+  (testing "Testing fn-trace on recursive multiarity function"
+    (def my-agent (agent []))
+    ((fn-trace foo-fn {:agent my-agent :with-args true}
+               ([a]
+                (if (not= a 0)
+                  (foo-fn 0)
+                  "coucou"))
+               ([a b] (foo-fn (+ a b))))
+     1 2)
+    (Thread/sleep 100)
+    (is (= #{{"a" 1 "b" 2} {"a" 3} {"a" 0}}
            (into #{} (map :args @my-agent))))))

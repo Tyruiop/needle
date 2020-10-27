@@ -97,7 +97,9 @@
            (list args `(base-trace ~fn-name ~fn-name-body ~args ~opts)))
          bodies)]
     (if anonymous
-      `(fn ~fn-name ~@new-bodies)
+      `(letfn [(~fn-name-body ~@bodies)
+               (~fn-name ~@new-bodies)]
+         ~fn-name)
       (list 'def (with-meta fn-name {:doc doc-string}) `(fn ~@new-bodies)))))
 
 (def
@@ -157,8 +159,6 @@
                 :flow-mode flow-mode :with-args with-args
                 :anonymous true}
           fdecl (if (vector? (first fdecl)) (list fdecl) fdecl)]
-      `(do
-         (let [~fn-name-body (fn ~fn-name ~@fdecl)]
-           (expl-arity ~fn-name ~fn-name-body nil ~fdecl ~opts))))))
+      `(expl-arity ~fn-name ~fn-name-body nil ~fdecl ~opts))))
 
 (. (var fn-trace) (setMacro))
