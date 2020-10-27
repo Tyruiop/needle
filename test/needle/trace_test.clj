@@ -14,6 +14,13 @@
     (Thread/sleep 100)
     (is (= 2 (count @my-agent))))
 
+  (testing "Testing default defn-trace without agent"
+    (def my-agent nil)
+    (defn-trace foo-fn my-agent
+      ([a] a)
+      ([a b] (+ a b)))
+    (is (= 3 (foo-fn 1 2))))
+
   (testing "Testing defn-trace with arguments"
     (def my-agent (agent []))
     (defn-trace foo-fn {:agent my-agent :with-args true}
