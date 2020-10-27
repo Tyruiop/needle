@@ -105,7 +105,7 @@
     params-map must have the :agent key set to the target agent,
     other optional keys of params-map are
     * :mode [:X | :EB], default :X
-    * :flow-mode [:s | :t | :n | nil], default nil
+    * :flow-mode [:s | :t | :f | nil], default nil
     * :with-args [true | false], default false"
     :arglists '([name agent doc-string? body]
                 [name params-map doc-string? body])}
@@ -140,7 +140,7 @@
     profiler. params-map must have the :agent key set to the
     target agent, other optional keys of params-map are
     * :mode [:X | :EB], default :X
-    * :flow-mode [:s | :t | :n | nil], default nil
+    * :flow-mode [:s | :t | :f | nil], default nil
     * :with-args [true | false], default false"
     :arglists '([name agent body]
                 [name params-map body])}
