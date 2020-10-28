@@ -49,6 +49,28 @@
     (spit target (json/write-str log))
     []))
 
+(defn send-flow-event
+  "Sends a flow event from within a function executing"
+  [agent flow-mode id name]
+  (send
+   agent conj
+   {:ph flow-mode :pid (get-pid) :tid (get-tid)
+    :ts (get-time) :id id :name name}))
+
+(defn handle-flow-events
+  "Handle flow events in the context of base-trace"
+  [agent flow-template flow-params]
+  (let [handle-flow-param
+        (fn [{:keys [id name]}]
+          (let [flow-event (assoc flow-template :id id :name name)]
+            (send agent conj flow-event)))]
+    (cond
+      (map? flow-params)
+      (handle-flow-param flow-params)
+
+      (seq? flow-params)
+      (doseq [flow-param flow-params] (handle-flow-param flow-param)))))
+
 (defmacro base-trace
   [fn-name fn-name-body args
    {:keys [agent event-mode flow-mode save-args args-mask save-output]}]
@@ -90,16 +112,15 @@
        (when (= ~event-mode :EB)
          (send ~agent conj ~'ev-start))
        (when (not (nil? ~flow-mode))
-         (let [~'flow-event {:ph ~flow-mode :pid ~'pid :tid ~'tid
-                             :ts (if
-                                   (or
-                                    (= ~flow-mode :t)
-                                    (= ~flow-mode :s))
-                                   ~'ev-ts-end
-                                   ~'ev-ts-start)
-                             :id (:flow-id (first ~args))
-                             :name (:flow-name (first ~args))}]
-           (send ~agent conj ~'flow-event)))
+         (let [~'flow-params (:flow-params (first ~args))
+               ~'flow-template {:ph ~flow-mode :pid ~'pid :tid ~'tid
+                                :ts (if
+                                        (or
+                                         (= ~flow-mode :t)
+                                         (= ~flow-mode :s))
+                                      ~'ev-ts-end
+                                      ~'ev-ts-start)}]
+           (handle-flow-events ~agent ~'flow-template ~'flow-params)))
        (send ~agent conj ~'ev-end)
        ~'res)))
 
