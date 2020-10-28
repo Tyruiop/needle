@@ -29,7 +29,7 @@
          data)]
     (into
      {}
-     (map (fn [[k v]] [k (with-out-str (pprint/pprint v))])))))
+     (map (fn [[k v]] [k (with-out-str (pprint/pprint v))]) cleared-data))))
 
 (defn format-ev [cat ev]
   (-> ev
