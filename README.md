@@ -59,6 +59,8 @@ purpose.
 
 Reference document for the [Chrome Tracing Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#!).
 
+More detailed examples can be found in the `examples` folder.
+
 `defn-trace` and `fn-trace` can alternatively take a map as parameter. The map
 can have the following keys, the default value is in brackets.
 
