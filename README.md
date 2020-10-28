@@ -63,8 +63,8 @@ Reference document for the [Chrome Tracing Format](https://docs.google.com/docum
 can have the following keys, the default value is in brackets.
 
 * `:agent` → the agent itself, **must** be set.
-* `:with-args true | [false]` → whether arguments' value should be saved.
-* `:args-map [(true|false)+] [nil]` → detailed lists of arguments to save
+* `:save-args true | [false]` → whether arguments' value should be saved.
+* `:args-mask [(true|false)+] [nil]` → detailed lists of arguments to save
   `false` will result in the value of the variable appearing as `__unsaved__`.
 * `:mode :EB [:X]` → which event mode is to be used
 * `:flow-mode :s :t :f [nil]` → if `nil`, disabled, otherwise saves an additional
@@ -76,8 +76,8 @@ Example:
 ```clojure
 (defn-trace my-function
   {:agent my-agent
-   :with-args true
-   :args-map [true false false]
+   :save-args true
+   :args-mask [true false false]
    :save-output true
    :mode :EB}
   "Document string"

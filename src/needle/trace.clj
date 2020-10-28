@@ -46,18 +46,18 @@
 
 (defmacro base-trace
   [fn-name fn-name-body args
-   {:keys [agent event-mode flow-mode with-args args-map save-output]}]
+   {:keys [agent event-mode flow-mode save-args args-mask save-output]}]
   `(if (nil? ~agent)
      (apply ~fn-name-body ~args)
      (let [~'pid (get-pid)
            ~'tid (get-tid)
            ~'args-list
-           (when ~with-args
-             (if (and ~args-map
-                      (= (count ~args-map) (count ~args)))
+           (when ~save-args
+             (if (and ~args-mask
+                      (= (count ~args-mask) (count ~args)))
                (into {} (map
                          #(do [(str %1) (if %3 %2 "__unsaved__")])
-                         '~args ~args ~args-map))
+                         '~args ~args ~args-mask))
                (into {} (map #(do [(str %1) %2]) '~args ~args))))
            ~'ev-name ~(str (ns-name *ns*) "/" (name fn-name))
            ~'ev-ts-start (get-time)
@@ -141,12 +141,12 @@
           ref-name (if (map? opts) (:agent opts) opts)
           event-mode (if (map? opts) (get opts :mode :X) :X)
           flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
-          with-args (if (map? opts) (get opts :with-args false) false)
-          args-map (if (map? opts) (get opts :args-map nil) nil)
+          save-args (if (map? opts) (get opts :save-args false) false)
+          args-mask (if (map? opts) (get opts :args-mask nil) nil)
           save-output (if (map? opts) (get opts :save-output false) false)
           opts {:agent ref-name :event-mode event-mode
-                :flow-mode flow-mode :with-args with-args
-                :args-map args-map :anonymous false
+                :flow-mode flow-mode :save-args save-args
+                :args-mask args-mask :anonymous false
                 :save-output save-output}
           fdecl (if (vector? (first fdecl)) (list fdecl) fdecl)]
       `(expl-arity ~fn-name ~fn-name-body ~doc-string ~fdecl ~opts))))
@@ -170,12 +170,12 @@
           ref-name (if (map? opts) (:agent opts) opts)
           event-mode (if (map? opts) (get opts :mode :X) :X)
           flow-mode (if (map? opts) (get opts :flow-mode nil) nil)
-          with-args (if (map? opts) (get opts :with-args false) false)
-          args-map (if (map? opts) (get opts :args-map nil) nil)
+          save-args (if (map? opts) (get opts :save-args false) false)
+          args-mask (if (map? opts) (get opts :args-mask nil) nil)
           save-output (if (map? opts) (get opts :save-output false) false)
           opts {:agent ref-name :event-mode event-mode
-                :flow-mode flow-mode :with-args with-args
-                :args-map args-map :anonymous true
+                :flow-mode flow-mode :save-args save-args
+                :args-mask args-mask :anonymous true
                 :save-output save-output}
           fdecl (if (vector? (first fdecl)) (list fdecl) fdecl)]
       `(expl-arity ~fn-name ~fn-name-body nil ~fdecl ~opts))))

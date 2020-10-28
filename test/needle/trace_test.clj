@@ -23,7 +23,7 @@
 
   (testing "Testing defn-trace with arguments"
     (def my-agent (agent []))
-    (defn-trace foo-fn {:agent my-agent :with-args true}
+    (defn-trace foo-fn {:agent my-agent :save-args true}
       ([a] a)
       ([a b] (+ a b)))
     (foo-fn 1)
@@ -34,7 +34,7 @@
 
   (testing "Testing defn-trace on recursive multiarity function"
     (def my-agent (agent []))
-    (defn-trace foo-fn {:agent my-agent :with-args true}
+    (defn-trace foo-fn {:agent my-agent :save-args true}
       ([a]
        (if (not= a 0)
          (foo-fn 0)
@@ -47,7 +47,7 @@
 
   (testing "Testing fn-trace on recursive multiarity function"
     (def my-agent (agent []))
-    ((fn-trace foo-fn {:agent my-agent :with-args true}
+    ((fn-trace foo-fn {:agent my-agent :save-args true}
                ([a]
                 (if (not= a 0)
                   (foo-fn 0)
@@ -60,7 +60,7 @@
 
   (testing "Testing defn-trace with destructuring"
     (def my-agent (agent []))
-    (defn-trace foo-fn {:agent my-agent :with-args true}
+    (defn-trace foo-fn {:agent my-agent :save-args true}
       ([{:keys [a]}]
        (if (not= a 0)
          (foo-fn {:a 0})
@@ -76,8 +76,8 @@
     (defn-trace foo-fn
       {:agent my-agent
        :save-output true
-       :with-args true
-       :args-map [true false]}
+       :save-args true
+       :args-mask [true false]}
       [a b] (+ a b))
     (foo-fn 1 2)
     (Thread/sleep 100)
