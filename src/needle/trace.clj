@@ -2,7 +2,8 @@
   (:require
    [clojure.walk :refer [postwalk]]
    [clojure.string :as str]
-   [clojure.data.json :as json])
+   [clojure.data.json :as json]
+   [clojure.pprint :as pprint])
   (:import
    [java.lang ProcessHandle]))
 
@@ -21,10 +22,14 @@
 (defn clean-data
   [data]
   (let [rejected-fns [fn?]
-        verif-fn #(some (fn [v-fn] (v-fn %)) rejected-fns)]
-    (postwalk
-     (fn [e] (when (not (verif-fn e)) e))
-     data)))
+        verif-fn #(some (fn [v-fn] (v-fn %)) rejected-fns)
+        cleared-data
+        (postwalk
+         (fn [e] (when (not (verif-fn e)) e))
+         data)]
+    (into
+     {}
+     (map (fn [[k v]] [k (with-out-str (pprint/pprint v))])))))
 
 (defn format-ev [cat ev]
   (-> ev
