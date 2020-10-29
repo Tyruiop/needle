@@ -139,14 +139,15 @@
         (map
          (fn [[args body]]
            (list (clean-args args) `(base-trace ~fn-name ~fn-name-body ~(clean-args args) ~opts)))
-         bodies)]
+         bodies)
+        new-args (list 'quote (map (fn [[new-arg _]] new-arg) bodies))]
     (if anonymous
       `(letfn [(~fn-name-body ~@bodies)
                (~fn-name ~@new-bodies)]
          ~fn-name)
       `(letfn [(~fn-name-body ~@bodies)
                (~fn-name ~@new-bodies)]
-         (def ^{:doc ~doc-string} ~fn-name ~fn-name)))))
+         (def ~(vary-meta fn-name merge {:doc doc-string :arglists new-args}) ~fn-name)))))
 
 (def
   ^{:doc "Wraps a function with an agent based profiler.
