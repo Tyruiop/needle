@@ -37,7 +37,9 @@
       (update :args clean-data)))
 
 (defn dump-log
+  "Dumps log to target file"
   [cur-agent target log-name cat]
+  (println "---- DUMPING NEEDLE LOG ----")
   (let [format-evs (partial format-ev cat)
         formatted-evs (map format-evs cur-agent)
         log
@@ -47,6 +49,7 @@
          :otherData
          {:version log-name}}]
     (spit target (json/write-str log))
+    (println "---- END DUMPING NEEDLE LOG ----")
     []))
 
 (defn send-flow-event
@@ -80,10 +83,11 @@
            ~'tid (get-tid)
            ~'args-list
            (when ~save-args
-             (if (and ~args-mask
-                      (= (count ~args-mask) (count ~args)))
+             (if ~args-mask
                (into {} (map
-                         #(do [(str %1) (if %3 %2 "__unsaved__")])
+                         #(do [(str %1) (cond (true? %3) %2
+                                              (fn? %3) (%3 %2)
+                                              :else "__unsaved__")])
                          '~args ~args ~args-mask))
                (into {} (map #(do [(str %1) %2]) '~args ~args))))
            ~'ev-name ~(str (ns-name *ns*) "/" (name fn-name))
