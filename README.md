@@ -66,8 +66,9 @@ can have the following keys, the default value is in brackets.
 
 * `:agent` → the agent itself, **must** be set.
 * `:save-args true | [false]` → whether arguments' value should be saved.
-* `:args-mask [(true|false)+] [nil]` → detailed lists of arguments to save
+* `:args-mask [(true|false|fn)+] [nil]` → detailed lists of arguments to save
   `false` will result in the value of the variable appearing as `__unsaved__`.
+* `:save-output true | [false]` → whether to save the output or not
 * `:mode :EB [:X]` → which event mode is to be used
 * `:flow-mode :s :t :f [nil]` → if `nil`, disabled, otherwise saves an additional
   flow event, `:s` and `:t` at the end of the `:EB` event, `:f` at the beginning.
@@ -79,13 +80,16 @@ Example:
 (defn-trace my-function
   {:agent my-agent
    :save-args true
-   :args-mask [true false false]
+   :args-mask [true false (fn [arg] (count arg)]
    :save-output true
    :mode :EB}
   "Document string"
   [max-val somefn setarg]
   (reduce somefn 0 (range max-val)))
 ```
+
+Notice that `:args-mask` can have a processing function for the arg to only save the
+argument partially.
 
 ## License
 
