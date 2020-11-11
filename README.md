@@ -48,13 +48,6 @@ see the associated graph.
 `fn-trace` functions cannot be anonymous and require a name, for tracing
 purpose.
 
-## TODO
-
-* [DONE] ~~Support for flow events~~
-* Support for async events
-* Support for multimethods
-* [DONE] ~~None of the macros work on multi arity functions.~~
-
 ## Documentation
 
 Reference document for the [Chrome Tracing Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#!).
@@ -90,6 +83,13 @@ Example:
 
 Notice that `:args-mask` can have a processing function for the arg to only save the
 argument partially.
+
+## TODO
+
+* [DONE] ~~Support for flow events~~
+* Support for async events
+* Support for multimethods
+* [DONE] ~~None of the macros work on multi arity functions.~~
 
 ## License
 
