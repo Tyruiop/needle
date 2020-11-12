@@ -5,6 +5,8 @@
 A simple Clojure profiler that works as a drop in `defn` replacement. Its output
 is to be loaded in [chrome://tracing](chrome://tracing).
 
+[![Clojars Project](https://img.shields.io/clojars/v/needle.svg)](https://clojars.org/needle)
+
 * Supports multi-process and multi-thread profiling.
 * Minimal performance impact in debug mode, negligible otherwise (see example bellow).
 * Cleaning and export of the data done in a separate tread.
@@ -86,9 +88,9 @@ argument partially.
 
 ## TODO
 
-* [DONE] ~~Support for flow events~~
 * Support for async events
 * Support for multimethods
+* [DONE] ~~Support for flow events~~
 * [DONE] ~~None of the macros work on multi arity functions.~~
 
 ## License
