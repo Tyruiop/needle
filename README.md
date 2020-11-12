@@ -75,7 +75,7 @@ Example:
 (defn-trace my-function
   {:agent my-agent
    :save-args true
-   :args-mask [true false (fn [arg] (count arg)]
+   :args-mask [true false (fn [arg] (count arg))]
    :save-output true
    :mode :EB}
   "Document string"
