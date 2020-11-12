@@ -5,6 +5,10 @@
 
 (def sum-agent (agent []))
 
+(defn-trace sum-to-many test-agent
+  [max-val]
+  (reduce + 0 (range max-val)))
+
 (defn-trace sum-to
   {:agent test-agent
    :mode :EB
@@ -12,7 +16,13 @@
    :save-args true
    :save-output true}
   [flow max-val]
-  (let [res (reduce + 0 (range max-val))]
+  (let [res (reduce
+             (fn [acc v]
+               (let [new-acc (conj acc (sum-to-many (+ max-val (rand-int max-val))))]
+                 (Thread/sleep 10)
+                 new-acc))
+             []
+             (range (inc (rand-int 5))))]
     (send
      sum-agent conj
      [(-> flow :flow-params :id) res])
@@ -42,22 +52,28 @@
     (Thread/sleep 10)
     res))
 
+(defn-trace end-service-subfn test-agent
+  []
+  (Thread/sleep 50))
+
 (defn-trace end-service
   {:agent test-agent
    :mode :EB
    :save-output true}
   []
   (let [res (reduce
-             (fn [acc [id res]]
+             (fn [acc [id res-id]]
                (send-flow-event test-agent :t id (str "SUM_" id))
-               (+ acc res))
+               (+ acc (apply + res-id)))
              0
              @sum-agent)]
+    (Thread/sleep 10)
+    (end-service-subfn)
     (Thread/sleep 10)
     res))
 
 (do
-  (start-service 10)
+  (start-service 3)
   (Thread/sleep 400)
   (end-service))
 
